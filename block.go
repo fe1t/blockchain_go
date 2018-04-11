@@ -5,6 +5,8 @@ import (
 	"encoding/gob"
 	"log"
 	"time"
+
+	"github.com/cbergoon/merkletree"
 )
 
 // Block represents a block in the blockchain
@@ -36,14 +38,16 @@ func NewGenesisBlock(coinbase *Transaction) *Block {
 
 // HashTransactions returns a hash of the transactions in the block
 func (b *Block) HashTransactions() []byte {
-	var transactions [][]byte
+	var transactions []merkletree.Content
 
 	for _, tx := range b.Transactions {
-		transactions = append(transactions, tx.Serialize())
+		transactions = append(transactions, NodeContent{tx.ID})
 	}
-	mTree := NewMerkleTree(transactions)
 
-	return mTree.RootNode.Data
+	t, _ := merkletree.NewTree(transactions)
+	mr := t.MerkleRoot()
+
+	return mr
 }
 
 // Serialize serializes the block
