@@ -13,6 +13,8 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log"
+
+	"github.com/davecgh/go-spew/spew"
 )
 
 const subsidy = 10
@@ -39,7 +41,17 @@ func (tx Transaction) Serialize() []byte {
 		log.Panic(err)
 	}
 
-	return encoded.Bytes()
+	ret := encoded.Bytes()
+
+	// fmt.Println("In serialize func")
+	// spew.Dump(ret)
+
+	return ret
+}
+
+// ToByteStream to prevent encoding/gob non-deterministic
+func (tx Transaction) ToByteStream() []byte {
+	return []byte(spew.Sdump(tx))
 }
 
 // Hash returns the hash of the Transaction
@@ -49,7 +61,7 @@ func (tx *Transaction) Hash() []byte {
 	txCopy := *tx
 	txCopy.ID = []byte{}
 
-	hash = sha256.Sum256(txCopy.Serialize())
+	hash = sha256.Sum256(txCopy.ToByteStream())
 
 	return hash[:]
 }
@@ -235,7 +247,11 @@ func NewUTXOTransaction(wallet *Wallet, to string, amount int, UTXOSet *UTXOSet)
 func DeserializeTransaction(data []byte) Transaction {
 	var transaction Transaction
 
-	decoder := gob.NewDecoder(bytes.NewReader(data))
+	// fmt.Println("in Deserialize")
+	reader := bytes.NewReader(data)
+	// spew.Dump(reader)
+
+	decoder := gob.NewDecoder(reader)
 	err := decoder.Decode(&transaction)
 	if err != nil {
 		log.Panic(err)
