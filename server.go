@@ -153,6 +153,9 @@ func sendGetData(address, kind string, id []byte) {
 }
 
 func sendTx(addr string, tnx *Transaction) {
+	// fmt.Println("In sendTx")
+	// spew.Dump(*tnx)
+	// spew.Dump(tnx.Serialize())
 	data := tx{nodeAddress, tnx.Serialize()}
 	payload := gobEncode(data)
 	request := append(commandToBytes("tx"), payload...)
@@ -308,7 +311,13 @@ func handleTx(request []byte, bc *Blockchain) {
 	}
 
 	txData := payload.Transaction
+	// fmt.Println("In handleTx")
+	// spew.Dump(txData)
 	tx := DeserializeTransaction(txData)
+	// spew.Dump(tx)
+	// sTxData := tx.Serialize()
+	// spew.Dump(sTxData)
+	// fmt.Println(testSerialization(txData, sTxData)) // true or false ?
 	mempool[hex.EncodeToString(tx.ID)] = tx
 
 	if nodeAddress == knownNodes[0] {
@@ -462,4 +471,8 @@ func nodeIsKnown(addr string) bool {
 	}
 
 	return false
+}
+
+func testSerialization(s1, s2 []byte) bool {
+	return bytes.Equal(s1, s2)
 }
