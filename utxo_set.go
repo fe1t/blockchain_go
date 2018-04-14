@@ -171,26 +171,27 @@ func (u UTXOSet) UpdateByTransaction(tx *Transaction, b *bolt.Bucket) {
 		for _, vin := range tx.Vin {
 			updatedOuts := TXOutputs{}
 			outsBytes := b.Get(vin.Txid)
-			outs := DeserializeOutputs(outsBytes)
+			if outsBytes != nil {
+				outs := DeserializeOutputs(outsBytes)
 
-			for outIdx, out := range outs.Outputs {
-				if outIdx != vin.Vout {
-					updatedOuts.Outputs = append(updatedOuts.Outputs, out)
+				for outIdx, out := range outs.Outputs {
+					if outIdx != vin.Vout {
+						updatedOuts.Outputs = append(updatedOuts.Outputs, out)
+					}
+				}
+
+				if len(updatedOuts.Outputs) == 0 {
+					err := b.Delete(vin.Txid)
+					if err != nil {
+						log.Panic(err)
+					}
+				} else {
+					err := b.Put(vin.Txid, updatedOuts.Serialize())
+					if err != nil {
+						log.Panic(err)
+					}
 				}
 			}
-
-			if len(updatedOuts.Outputs) == 0 {
-				err := b.Delete(vin.Txid)
-				if err != nil {
-					log.Panic(err)
-				}
-			} else {
-				err := b.Put(vin.Txid, updatedOuts.Serialize())
-				if err != nil {
-					log.Panic(err)
-				}
-			}
-
 		}
 	}
 

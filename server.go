@@ -205,18 +205,24 @@ func handleBlock(request []byte, bc *Blockchain) {
 	fmt.Println("Recevied a new block!")
 
 	// fe1t: Verify new block before ddding to blockchain
-	bc.AddBlock(block)
+	acceptBlock := true
+	if acceptBlock {
+		bc.AddBlock(block)
 
-	fmt.Printf("Added block %x\n", block.Hash)
+		fmt.Printf("Added block %x\n", block.Hash)
 
-	if len(blocksInTransit) > 0 {
-		blockHash := blocksInTransit[0]
-		sendGetData(payload.AddrFrom, "block", blockHash)
+		if len(blocksInTransit) > 0 {
+			blockHash := blocksInTransit[0]
+			sendGetData(payload.AddrFrom, "block", blockHash)
 
-		blocksInTransit = blocksInTransit[1:]
+			// TODO: felt: check bug later
+			blocksInTransit = blocksInTransit[1:]
+		} else {
+			UTXOSet := UTXOSet{bc}
+			UTXOSet.Reindex()
+		}
 	} else {
-		UTXOSet := UTXOSet{bc}
-		UTXOSet.Reindex()
+		fmt.Println("Dropping invalid incoming block...")
 	}
 }
 
@@ -332,11 +338,19 @@ func handleTx(request []byte, bc *Blockchain) {
 		if len(mempool) >= 2 && len(miningAddress) > 0 {
 		MineTransactions:
 			var txs []*Transaction
+			var usedTXInput [][]byte
 
 			for id := range mempool {
 				tx := mempool[id]
 				if bc.VerifyTransaction(&tx) {
-					txs = append(txs, &tx)
+					if !hasSameTXInput(usedTXInput, tx.Vin) {
+						txs = append(txs, &tx)
+						for i := range tx.Vin {
+							usedTXInput = append(usedTXInput, tx.Vin[i].Txid)
+						}
+					} else {
+						delete(mempool, id)
+					}
 				}
 			}
 
@@ -357,6 +371,7 @@ func handleTx(request []byte, bc *Blockchain) {
 			for _, tx := range txs {
 				txID := hex.EncodeToString(tx.ID)
 				delete(mempool, txID)
+				// delete(mempool, used)
 			}
 
 			for _, node := range knownNodes {
@@ -477,4 +492,15 @@ func nodeIsKnown(addr string) bool {
 
 func testSerialization(s1, s2 []byte) bool {
 	return bytes.Equal(s1, s2)
+}
+
+func hasSameTXInput(listByte [][]byte, inputs []TXInput) bool {
+	for i := range inputs {
+		for _, val := range listByte {
+			if bytes.Compare(val, inputs[i].Txid) == 0 {
+				return true
+			}
+		}
+	}
+	return false
 }
