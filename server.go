@@ -203,6 +203,8 @@ func handleBlock(request []byte, bc *Blockchain) {
 	block := DeserializeBlock(blockData)
 
 	fmt.Println("Recevied a new block!")
+
+	// fe1t: Verify new block before ddding to blockchain
 	bc.AddBlock(block)
 
 	fmt.Printf("Added block %x\n", block.Hash)

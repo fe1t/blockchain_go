@@ -138,55 +138,68 @@ func (u UTXOSet) Reindex() {
 	})
 }
 
-// Update updates the UTXO set with transactions from the Block
-// The Block is considered to be the tip of a blockchain
-func (u UTXOSet) Update(block *Block) {
+// Update updates the UTXO set with either Block or Transaction
+func (u UTXOSet) Update(T interface{}) {
 	db := u.Blockchain.db
 
 	err := db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(utxoBucket))
 
-		for _, tx := range block.Transactions {
-			if tx.IsCoinbase() == false {
-				for _, vin := range tx.Vin {
-					updatedOuts := TXOutputs{}
-					outsBytes := b.Get(vin.Txid)
-					outs := DeserializeOutputs(outsBytes)
-
-					for outIdx, out := range outs.Outputs {
-						if outIdx != vin.Vout {
-							updatedOuts.Outputs = append(updatedOuts.Outputs, out)
-						}
-					}
-
-					if len(updatedOuts.Outputs) == 0 {
-						err := b.Delete(vin.Txid)
-						if err != nil {
-							log.Panic(err)
-						}
-					} else {
-						err := b.Put(vin.Txid, updatedOuts.Serialize())
-						if err != nil {
-							log.Panic(err)
-						}
-					}
-
-				}
+		switch T.(type) {
+		case *Block:
+			block := T.(*Block)
+			for _, transaction := range block.Transactions {
+				u.UpdateByTransaction(transaction, b)
 			}
-
-			newOutputs := TXOutputs{}
-			for _, out := range tx.Vout {
-				newOutputs.Outputs = append(newOutputs.Outputs, out)
-			}
-
-			err := b.Put(tx.ID, newOutputs.Serialize())
-			if err != nil {
-				log.Panic(err)
-			}
+		case *Transaction:
+			transaction := T.(*Transaction)
+			u.UpdateByTransaction(transaction, b)
+		default:
+			log.Panic("error occurs when doing type assertion")
 		}
 
 		return nil
 	})
+	if err != nil {
+		log.Panic(err)
+	}
+}
+
+// UpdateByTransaction updates the UTXO set with a transactions
+func (u UTXOSet) UpdateByTransaction(tx *Transaction, b *bolt.Bucket) {
+	if tx.IsCoinbase() == false {
+		for _, vin := range tx.Vin {
+			updatedOuts := TXOutputs{}
+			outsBytes := b.Get(vin.Txid)
+			outs := DeserializeOutputs(outsBytes)
+
+			for outIdx, out := range outs.Outputs {
+				if outIdx != vin.Vout {
+					updatedOuts.Outputs = append(updatedOuts.Outputs, out)
+				}
+			}
+
+			if len(updatedOuts.Outputs) == 0 {
+				err := b.Delete(vin.Txid)
+				if err != nil {
+					log.Panic(err)
+				}
+			} else {
+				err := b.Put(vin.Txid, updatedOuts.Serialize())
+				if err != nil {
+					log.Panic(err)
+				}
+			}
+
+		}
+	}
+
+	newOutputs := TXOutputs{}
+	for _, out := range tx.Vout {
+		newOutputs.Outputs = append(newOutputs.Outputs, out)
+	}
+
+	err := b.Put(tx.ID, newOutputs.Serialize())
 	if err != nil {
 		log.Panic(err)
 	}
