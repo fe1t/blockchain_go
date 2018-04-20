@@ -14,8 +14,8 @@ func (cli *CLI) send(from, to string, amount int, nodeID string, mineNow bool) {
 	}
 
 	bc := NewBlockchain(nodeID)
-	UTXOSet := UTXOSet{bc}
 	defer bc.db.Close()
+	UTXOSet := UTXOSet{bc}
 
 	wallets, err := NewWallets(nodeID)
 	if err != nil {
@@ -32,9 +32,9 @@ func (cli *CLI) send(from, to string, amount int, nodeID string, mineNow bool) {
 		newBlock := bc.MineBlock(txs)
 		UTXOSet.Update(newBlock)
 	} else {
-		sendTx(knownNodes[0], tx)
+		sendTx("all", tx)
+		// sendTx(knownNodes[0], tx)
 		// UTXOSet.Update(tx)
 	}
-
-	fmt.Println("Success!")
+	fmt.Println("Success")
 }

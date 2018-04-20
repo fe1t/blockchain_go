@@ -10,8 +10,8 @@ func (cli *CLI) getBalance(address, nodeID string) {
 		log.Panic("ERROR: Address is not valid")
 	}
 	bc := NewBlockchain(nodeID)
-	UTXOSet := UTXOSet{bc}
 	defer bc.db.Close()
+	UTXOSet := UTXOSet{bc}
 
 	balance := 0
 	pubKeyHash := Base58Decode([]byte(address))

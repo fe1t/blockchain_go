@@ -72,7 +72,7 @@ func CreateBlockchain(address, nodeID string) *Blockchain {
 func NewBlockchain(nodeID string) *Blockchain {
 	dbFile := fmt.Sprintf(dbFile, nodeID)
 	if dbExists(dbFile) == false {
-		fmt.Println("No existing blockchain found. Create one first.")
+		fmt.Println("No existing blockchain found. Create one.")
 		os.Exit(1)
 	}
 
@@ -84,6 +84,9 @@ func NewBlockchain(nodeID string) *Blockchain {
 
 	err = db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(blocksBucket))
+		if err != nil {
+			return err
+		}
 		tip = b.Get([]byte("l"))
 
 		return nil
@@ -92,9 +95,7 @@ func NewBlockchain(nodeID string) *Blockchain {
 		log.Panic(err)
 	}
 
-	bc := Blockchain{tip, db}
-
-	return &bc
+	return &Blockchain{tip, db}
 }
 
 // AddBlock saves the block into the blockchain
@@ -233,7 +234,7 @@ func (bc *Blockchain) GetBlock(blockHash []byte) (Block, error) {
 		blockData := b.Get(blockHash)
 
 		if blockData == nil {
-			return errors.New("Block is not found.")
+			return errors.New("Block is not found")
 		}
 
 		block = *DeserializeBlock(blockData)

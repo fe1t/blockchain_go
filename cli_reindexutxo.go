@@ -4,6 +4,7 @@ import "fmt"
 
 func (cli *CLI) reindexUTXO(nodeID string) {
 	bc := NewBlockchain(nodeID)
+	defer bc.db.Close()
 	UTXOSet := UTXOSet{bc}
 	UTXOSet.Reindex()
 
