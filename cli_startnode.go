@@ -14,5 +14,6 @@ func (cli *CLI) startNode(nodeID, minerAddress string) {
 			log.Panic("Wrong miner address!")
 		}
 	}
-	startServer(nodeID, minerAddress)
+	startServer(minerAddress)
+	// startServer(nodeID, minerAddress)
 }
